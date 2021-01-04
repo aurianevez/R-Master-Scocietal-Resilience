@@ -1,0 +1,344 @@
+---
+title: "Midterm Assignment"
+output: html_document
+---
+
+
+## _Auriane Vez_
+
+## 0) Setting work directory & loading libraries
+
+```{r}
+setwd("~/Master/BigdataSmallData/midterm R")
+```
+
+```{r, message =  FALSE}
+library(tidyverse)
+library(dplyr)
+```
+
+
+## 1) Import data set
+
+
+
+```{r, message = FALSE}
+# import csv file and using first row of dataset as column names
+library(tidyverse)
+data <- read.csv("data2.csv", header = TRUE, sep = ";", colClasses = "character")
+data = data %>%
+  select("id":"level","comments.summary.total_count":"angry.summary.total_count") %>%
+  mutate_if(is.character,as.numeric) %>%
+  mutate(object_type = data$object_type,
+  object_id = data$object_id,
+  query_type = data$query_type,
+  query_time = data$query_time,
+  query_status = data$query_status,
+  message = data$message,
+  created_time = data$created_time)
+
+# defining number of colums
+ncol(data)
+
+#defining number of row
+nrow(data)
+
+
+```
+
+## 2a) Determine datatype
+```{r}
+sapply(data, class)
+```
+
+## 2b) Column converting ?
+I don't think any converting is necessary! Indeed, all columns related to time
+or date are in carachter type so if we want to use as.date it is already in 
+the good format. All columns containing letter character are also of character 
+type and all other columns that contain number such as x_count are numeric.
+
+
+## 3) Inspecting 25 row of data
+```{r}
+
+head(data, 25)
+
+```
+## 4) Transforming dataset 
+  
+__logic used:__   
+  
+1) deleting all columns that I won't need for the assignment  
+2) using the function distinct() to delete all duplicate row that do not contain the message   
+3) merging according to object_id  
+  
+
+
+```{r}
+# 1)deleting unnecessary columns
+cl_data <- data %>% 
+  subset(select = -c(id, parent_id, level, query_type, query_time, query_status, object_type))
+
+```
+```{r}
+# 2) deleting duplicate rows containing the number of reactions
+# note for later the function distinct() with keep_all keeps only one time the rows that contain extactly the samw data.
+cl_data <- cl_data %>% 
+  distinct(.keep_all = FALSE)
+
+
+```
+
+
+```{r}
+# 3) alternative 1 creating two data set 1 with message and created_time and one without
+
+# data set containing only object_id, message and created_time
+cl_data_2 <- cl_data %>% 
+  select(object_id, message, created_time) 
+
+# deleting all the line that have no creat_time and message
+cl_data_2 <- subset(cl_data_2, message != "" & created_time != "")
+
+# deleting columns message and created_tim + deleting all rows with NA values
+cl_data <- cl_data %>% 
+  subset(select = -c(message, created_time)) %>% 
+  na.omit()
+
+#joining the two table
+cl_data <- left_join(cl_data, cl_data_2, by = "object_id")
+
+```
+ 
+
+
+_"doggy"alternative for 3)_
+```{r, message = FALSE}
+
+# #3) merging the rows
+# cl_data <- cl_data %>% 
+#   group_by(object_id) %>% 
+#   summarize_all(funs(toString(unique(.[!is.na(.)]))))
+# # line of code with summarize_all retrieved from: https://stackoverflow.com/questions/53781563/combine-rows-based-on-multiple-columns-and-keep-all-unique-values/53781633
+# 
+# #checking class due to toString (necessary to combine some of the data)
+# sapply(cl_data, class)
+# 
+# #transforming to numeric again
+# cl_data <- cl_data %>% 
+#   mutate_at(vars(ends_with("count")), as.numeric)
+# 
+# # checking class 
+# sapply(cl_data, class)
+
+```
+
+
+## 5) Rename reaction columns
+
+```{r}
+# rename(df, new_name = old_name)
+cl_data <- cl_data %>% 
+  rename(, shares = shares.count, like = like.summary.total_count, wow = 
+           wow.summary.total_count, sad = sad.summary.total_count, reactions =
+           reactions.summary.total_count, love = love.summary.total_count, haha =
+           haha.summary.total_count, angry = angry.summary.total_count, comments =
+           comments.summary.total_count)
+
+colnames(cl_data)
+```
+    
+## 6) Creat a summary variable
+
+```{r}
+cl_data <- mutate(cl_data, emotivesum = love + wow + haha + sad + angry)
+```
+
+## 7) Convert the created_time column
+Write code to extract the dates from the created_time column. Create three new columns: (1) one that contains the entire creation date (e.g., 2020-10-15), (2) one that contains only the month and year in which each Facebook post was created, and (3) one for year only.
+
+```{r}
+#creation of Year-Month-Day
+cl_data$date <- as.Date(cl_data$created_time, format = "%Y-%m-%dT%H:%M:%S%z") 
+
+```
+```{r}
+# creation of Year month
+cl_data$Yr_month <- format(as.Date(cl_data$date), "%Y-%m") 
+```
+```{r}
+# Creation year
+cl_data$Year <- format(as.Date(cl_data$date, format = "%Y-%m-%dT%H:%M:%S%z"), "%Y")
+```
+
+
+# 8 Summarize dataset
+  
+
+## 8a) Earliest and latest date in the data
+```{r}
+min(cl_data$date, na.rm = TRUE)
+max(cl_data$date, na.rm = TRUE)
+```
+
+## 8b) Month with the most post and the fewest post
+```{r}
+cl_data$month <- format(as.Date(cl_data$date, format ="%Y-%m-%dT%H:%M:%S%z"), "%m")
+
+count_month <- cl_data %>% 
+  count(month) %>% 
+  #remove the line with NA
+  na.omit()
+
+# printing the month with the most post 
+most <- count_month[with(count_month, order(-n)),] %>%
+  select(month)
+
+head(most, n = 1)
+
+# printing the month with the least post
+least <- count_month[with(count_month, order(n)),] %>%
+  select(month)
+
+head(least, n = 1)
+
+```
+
+
+## 8c) Posts who received the (1) fewest and (2) most likes
+including the message of these two post 
+
+```{r}
+
+most_likes <- cl_data %>% 
+  slice_max(like) %>% 
+  select(message, like)
+
+least_likes <- cl_data %>% 
+  slice_min(like) %>% 
+  select(message, like)
+
+```
+
+
+## 8d) Means and standard deviations of all reaction counts for 2019 Posts
+
+
+```{r}
+reaction_8d <- cl_data %>% 
+  filter(Year == "2019")
+
+result_mean <- reaction_8d %>% 
+  summarise_at(c("like", "wow", "angry", "sad", "love", "shares"), mean, na.rm = TRUE)
+
+# this step is not necessary but it looks better
+Mean <- pivot_longer(result_mean, cols = c(like, wow, angry, sad, love, shares), names_to = "reaction", values_to = "mean")
+
+result_sd <- reaction_8d %>% 
+  summarise_if(is.numeric, sd, na.rm = TRUE) %>% 
+  select("like", "wow", "angry", "sad", "love", "shares")
+
+# this step is not necessary but it looks better
+SD <- pivot_longer(result_sd, cols = c(like, wow, angry, sad, love, shares), names_to = "reaction", values_to = "mean")
+  
+```
+
+
+## 8e) Median value of the variable emotivesum per month
+
+```{r}
+emoti_median_months <- cl_data %>% 
+  group_by(month) %>% 
+  summarise_at("emotivesum", median, na.rm = TRUE) %>% 
+  na.omit()
+```
+
+
+
+## 9) 4 commons errors with solutions
+
+1) When creating a variable with mutate I used the arrow (<-) instead of the equal sign. This results in having the wrong name for the variable in the table. (it is not an error in the sens
+that the code does not run but in the sens that the data does not look good)  
+Let me illustrate my point:  
+If I write this code:
+`data <- mutate(data, ffratio <- user_friends_count/user_followers_count)`  
+The columns in data will be called ffratio <- user_friends_count/user_followers_count  
+If I write this code:  
+`data <- mutate(data, ffratio = user_friends_count/user_followers_count)`  
+The columns in data will be call ffratio
+
+
+2) When extracting dates with as.Date I was not puting the extract character that was between the numbers therefore the code was not running. I realized that by adding all the character it would work. 
+for example is the data is like that: 2019-03-17T16:28:11+0000
+In my code I need to add the - and : as well as the T: `",%Y-%m-%dT%H:%M:%S%z"`
+
+
+3) One of the simple error I get is when I did not load the library so I started to write the code to load the library at the beginning of my code after setting my working directory like it is done when coding in C or python. I think it's also good to have everything at the same place if external people read our code they know which library was used. Finally, it's useful because sometime error don't mention that the library was not load they juste say could not find the function. As a beginner I tend to think that it's because i wrote the function wrong or used it wrong. 
+
+4) I tried to use ends_with or starts_with within a function (I don't remember which one it was). I got an error because ends_with/starts_with can be used only within the selection(). It was for question 5. I wanted to automate the renaming of the column using ends_with to rename all columns simultaneously that ended with summary.total.count. I looked for a really long time but could not find the solution for this particular problem. It could be awesome if you could show us, if its possible. Anyway, i learned that ends_with can only be used within selection(). 
+
+
+## 10) Using %>%
+
+__Two situations where pipes are useful:__ 
+
+- Pipes are useful when we want to make many operations in a row with the same data set. For example at the question 8) I selected the database then group_by month as I wanted to calculate the median of a variable for every month, I then used the pipe again to calculate then median. By doing so I did not have to mention the data set nor to save every step into a new variable  
+
+- Another example is how I used pipes for the question 8)c I selected the data set then selected the row with the biggest number of like and then used the pipe to keep only the message column and number of likes, all this by saving only once in a variable at the beginning of my code. 
+
+__Two situations where pipes are not the best option:__
+
+- When you have multiple output for example at 8d) I wrote this code:  
+`reaction_8d <- cl_data %>% filter(Year == "2019")`  
+`result_mean <- reaction_8d %>% summarise_at(c("like", "wow", "angry", "sad", "love", "shares"), mean, na.rm = TRUE)`  
+`result_sd <- reaction_8d %>% summarise_if(is.numeric, sd, na.rm = TRUE) %>% select("like", "wow", "angry", "sad", "love", "shares")`  
+  
+  Because I wanted two distinct output result_mean and result_sd I first save my filter data by years in variable that could use in the rest of my code for the two output. This code could not have been done in one sequence of code 
+
+- If there are too many line of code, it's better to assign step by step to some value, it also helps for debugging. 
+
+
+## 11) Five facebook topic
+
+Imagine you have identified five topics in the Facebook posts you have collected. Each topic has its own column of the class logical (TRUE/FALSE) which indicates whether a Facebook posts was classified as containing that topic. Explain how you would have to reshape and summarize your data to be able to create a bar plot of the average amount of likes per topic.
+
+1) transform the value False/True respectively to 0 and 1.  
+(use mutate() with ifelse() such as :  
+`data <- data %>% mutate(topic1 = ifelse(topic_1 == TRUE, 1,0)))`  
+repeat for 5 topics   
+_(note for later, how could i type this code in one line for the 5 topics?)_
+   
+
+2) in the data set create a new variable (with mutate) for every topic for which the value correspond to topic_x * number of like of the post.  
+`data <- mutate(topic_x_like = topic_x * like)`  
+repeat for 5 topics  
+_(note for later, how could i type this code in one line for the 5 topics?)_
+
+3) extract with select() the 5 new variables (topic_x_like) into a new data set called topic
+   rename every topic_x_like to topic_x (for later in the plot, so it gives a better visual)
+
+4) create a new variable, count, in which we save the mean of each topic obtained with the variable summarize_at() obtained from the data set topic.  
+`count <- topic %>% summarize_at(everything(), mean, na.rm = TRUE)`
+
+7) the table needs to be "pivoted" with pivot_longer so we have one columns with the topic and one with the mean  
+`count <- pivot_longer(count, cols = c(Topic_1, Topic_2, Topic_3, Topic_4, Topic_5), names_to = "Topic", values_to = "mean")`
+
+6) plot count into barplot() with the following code (obtaining an horizontal bar plot which would allow to compare more easily)  
+`barplot(count, main = "Average of like oer topic ", xlab = " nbr of like mean", ylab = "topic",`   `names.arg = c("Topic 1", "Topic 2", "Topic 3", "Topic 4", "Topic 5"), horiz = TRUE)` 
+
+_Limitation of this method: this method is acceptable because there are only 5 topics, however if there were for example 20 or morex variables, the first 2 step should be automated._ 
+
+
+## 12) SPSS VS R
+
+For general aspect, the first reason why I think R is more interesting to work with than with SPSS, is simply because R is open source, it is created by the people for the people. At the contrary the SPSS license is really expensive. So just in term of accessibility, R is much more advantageous. Therefore, when one research wants to share its code with another researcher, they have no problem of opening and running the code. Another point related to the open source aspect, is the number of resources available online. Indeed, as the packages are created by the people, they produce a lot of information with it and there are a lot of resources on stack overflow for example as the R community if very big. The enormous amount of information is due to the fact that R is used for data science, but also for social science or even natural science. Therefore a big pool of people are working with R. Finally R is built with packages, and therefore it is an evolutionary program(ing language). Hence, there will be always more and more options while working with R. Updates are also very frequent.  
+Regarding, the technical matter, SPSS could be seen as more accessible, in the sense that it is a “press button program”(as it was presented to me at university). So you do not need to have any programming skills to use SPSS, you ‘just’ need to know where to click. In terms of programming, in SPSS you depend on what is preprogramed as with R you can write code like with other programming language such as Python. Therefore you can create your own function. When working with data analysis, reporting is a very important part, not only you can connect R with Github but also the tools of reporting a more elaborated within R. These are the reasons why I think R is a better option for social media data analysis. 
+
+
+
+
+
+
+
+
+
