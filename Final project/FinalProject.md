@@ -10,7 +10,7 @@ Our research question was the following: **How did the discourse of #BlackLivesM
 A full description of the project can be found in the introduction of the paper. 
 
 We conducted a **Topic Modelling** mixed with **qualitative research method** in order to give more context and explaination of the results obtained by the **LDA**.  
-In order to compare the evolution, we conducted two topic modeling and a data set containing tweets before the murder of George Floyd and a data set
+In order to compare the evolution, we conducted a topic modeling on a data set containing tweets before the murder of George Floyd and on a data set
 containing tweet from the murder of Gerorge Floyd. 
 A full description of the method can be found in the method section of the paper. 
 
