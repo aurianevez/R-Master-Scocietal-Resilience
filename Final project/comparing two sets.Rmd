@@ -1,0 +1,129 @@
+---
+title: "Comparing two sets"
+output: html_notebook
+---
+-----------------------------------
+
+This work is based on the code retrived from https://www.tidytextmining.com/twitter.html
+
+-----------------------------------
+
+# 0) setting working directory 
+```{r}
+setwd("~/Master/BigdataSmallData/final")
+```
+
+# 1) libraries csv files 
+
+```{r, message = FALSE}
+library(lubridate)
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(tidyverse)
+library(topicmodels)
+library(quanteda)
+library(tidytext)
+```
+
+```{r, message = FALSE}
+before <- read_csv("before_gf.csv")
+after <- read_csv("after_gf.csv")
+```
+
+
+# 2) cleaning up the data 
+```{r}
+before <- before %>% 
+  mutate(text = gsub('http\\S+\\s*', "", text)) %>% 
+  mutate(text = str_remove_all(text, "@\\w+")) %>% 
+  mutate(text = str_remove_all(text, "#\\w+")) 
+
+
+
+after <- after %>%  
+  mutate(text = gsub('http\\S+\\s*', "", text)) %>% 
+  mutate(text = str_remove_all(text, "@\\w+")) %>% 
+  mutate(text = str_remove_all(text, "#\\w+"))
+
+  
+```
+
+
+
+# 3) biding dataset 
+```{r}
+#code retrived from https://www.tidytextmining.com/twitter.html and adapted
+
+tweets <- bind_rows(before %>% 
+                      mutate(set = "before"),
+                    after %>% 
+                      mutate(set = "after") )
+
+tweets <- tweets %>% 
+  mutate(timestamp = ymd(date))
+  
+```
+
+
+
+# 5) remove stop words
+
+```{r}
+
+remove_reg <- "&amp;|&lt;|&gt;"
+tweets <- tweets %>% 
+  filter(!str_detect(text, "^RT")) %>%
+  mutate(text = str_remove_all(text, remove_reg)) %>%
+  unnest_tokens(word, text, token = "tweets") %>%
+  filter(!word %in% stop_words$word,
+         !word %in% str_remove_all(stop_words$word, "'"),
+         str_detect(word, "[a-z]"))
+```
+
+#6) words frequencies
+
+```{r}
+frequency <- tweets %>% 
+  group_by(set) %>% 
+  count(word, sort = TRUE) %>% 
+  left_join(tweets %>% 
+              group_by(set) %>% 
+              summarise(total = n())) %>%
+  mutate(freq = n/total)
+
+
+```
+# 7) shpae the data to be ploted
+
+```{r}
+frequency <- frequency %>% 
+  select(set, word, freq) %>% 
+  spread(set, freq) %>%
+  arrange(before, after)
+```
+
+
+# 8) plot
+```{r}
+# "Words near the line are used with about equal frequencies by before and after the murder of George Floyd, while words far away from the line are used much more by one person compared to the other".
+
+
+library(scales)
+
+ggplot(frequency, aes(after, before)) +
+  geom_jitter(alpha = 0.1, size = 1.5, width = 1, height = 1) +
+  geom_text(aes(label = word), check_overlap = T, vjust = 1.5) +
+  scale_x_log10(labels = percent_format()) +
+  scale_y_log10(labels = percent_format()) +
+  geom_abline(color = "blue")
+```
+
+```{r}
+# tiff('Figure.tiff', width=4500, height=1800, res=350)
+# plot
+# dev.off()
+
+```
+
+

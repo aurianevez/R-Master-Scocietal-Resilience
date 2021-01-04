@@ -1,0 +1,79 @@
+---
+title: "sampleing tweets"
+output: html_document
+---
+
+
+# 0) setting working directory 
+```{r}
+setwd("~/Master/BigdataSmallData/final")
+```
+
+```{r}
+library(tidyverse)
+library(xlsx)
+```
+
+```{r}
+data <- read_csv("tweets_blm_3.csv")
+```
+
+```{r}
+data <- data %>% 
+  drop_na(hashtags) %>% 
+  filter(grepl("blackli", hashtags, ignore.case = F))
+```
+
+
+```{r}
+data <- data %>% 
+  select(id, created_at, hashtags, text, tweet_url)
+  
+```
+
+
+```{r}
+# making sure the created_at class is char
+class(data$created_at)
+
+# making sure the format will be read
+Sys.setlocale("LC_TIME", "C")
+```
+
+```{r}
+# cleaning date
+
+data$date <- format(as.Date(data$created_at, format = "%a %b %d %H:%M:%S %z %Y" ), "%Y-%m-%d")
+data$year <- format(as.Date(data$date, format = "%Y-%m-%d"),"%y")
+data$month <- format(as.Date(data$date, format = "%Y-%m-%d"),"%m")
+```
+
+```{r}
+data <- data %>% 
+  filter(year >= "19")
+```
+
+```{r}
+after <- data %>% 
+   filter(date >= as.Date("2020-05-25"))
+```
+
+
+```{r}
+sample <- after %>% 
+  select(text)
+```
+
+```{r}
+# making sure the selection can be replicated use set.seed
+set.seed(1)
+
+ssample <- sample %>% 
+  sample_n(300)
+```
+
+```{r}
+write.xlsx(sample, sheetName="sample af", 
+  col.names=TRUE, row.names=TRUE, append=FALSE)
+```
+

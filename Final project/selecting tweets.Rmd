@@ -1,0 +1,112 @@
+---
+title: "selecting tweets"
+output:
+  word_document: default
+  html_document: default
+---
+
+# 0) setting working directory 
+
+```{r}
+setwd("~/Master/BigdataSmallData/final")
+```
+
+# 1) libraries
+
+```{r, message = FALSE}
+library(tidyverse)
+library(dplyr)
+library(lubridate)
+```
+
+
+# 2) reading CSV files
+```{r, message = FALSE}
+
+data <- read_csv("tweets_blm_3.csv")
+
+```
+
+
+# 3) Deleting tweets with no hastag and that does not contain black*
+
+```{r}
+data <- data %>% 
+  drop_na(hashtags) %>% 
+  filter(grepl("blackli", hashtags, ignore.case = F))
+```
+
+
+
+# 4) Deleting unnecsary columns 
+
+```{r}
+
+data <- data %>% 
+  select(id, created_at, hashtags, text, tweet_url)
+  
+
+```
+
+
+
+# 5) Selecting based on the date 
+
+```{r}
+# making sure the created_at class is char
+class(data$created_at)
+
+```
+ 
+```{r}
+# making sure the format will be read
+Sys.setlocale("LC_TIME", "C")
+```
+
+```{r}
+# checking format of date
+
+head(data$created_at)
+```
+
+```{r}
+# cleaning date
+
+data$date <- format(as.Date(data$created_at, format = "%a %b %d %H:%M:%S %z %Y" ), "%Y-%m-%d")
+data$year <- format(as.Date(data$date, format = "%Y-%m-%d"),"%y")
+data$month <- format(as.Date(data$date, format = "%Y-%m-%d"),"%m")
+
+```
+
+selecting tweets from 2020
+```{r}
+data <- data %>% 
+  filter(year >= "19")
+```
+
+
+
+data set before the murder of George Floyd - 1 january 2020 - 24 May 2020
+```{r}
+
+
+before_GF <- data %>% 
+  filter(date < as.Date("2020-05-25"))
+
+```
+
+
+data set from the murder of Geroge Floyd 25 may
+
+```{r}
+after_GF <- data %>% 
+   filter(date >= as.Date("2020-05-25"))
+```
+
+creating csv files 
+
+```{r}
+write_csv(before_GF, "before_gf.csv", col_names = T)
+write_csv(after_GF, "after_gf.csv", col_names = T)
+```
+

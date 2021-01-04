@@ -1,0 +1,149 @@
+---
+title: "Topic Modeling"
+output: html_document
+---
+
+
+# 0) setting working directory 
+
+```{r}
+setwd("~/Master/BigdataSmallData/final")
+```
+
+# 1) libraries and CSV files 
+
+```{r}
+library(tidyverse)
+library(topicmodels)
+library(quanteda)
+library(tidytext)
+
+```
+
+```{r, message = FALSE}
+before <- read_csv("before_gf.csv")
+after <- read_csv("after_gf.csv")
+
+```
+
+# 2) cleaning up the data 
+
+```{r}
+before <- before %>% 
+  mutate(text = gsub('http\\S+\\s*', "", text)) %>% 
+  mutate(text = str_remove_all(text, "@\\w+")) %>% 
+  mutate(text = str_remove_all(text, "#\\w+")) 
+
+
+after <- after %>%  
+  mutate(text = gsub('http\\S+\\s*', "", text)) %>% 
+  mutate(text = str_remove_all(text, "@\\w+")) %>% 
+  mutate(text = str_remove_all(text, "#\\w+"))
+  
+```
+
+
+# 3) Creating the document-term matrix and cleaning up
+```{r}
+
+# 1) creating the corpus for both dataset
+
+# before GF data set
+bf_corpus <- before %>% 
+  corpus(text_field = "text")
+
+# After GF data set
+af_corpus <- after %>% 
+  corpus(text_field = "text")
+
+# 2nd step: creating the document-term matrix 
+# removing stopwords, punctuation and converting to lowercase + stemming
+
+bf_dtm <- dfm(bf_corpus, tolower=T, remove = stopwords('en'), stem = T, remove_punct=T)
+
+af_dtm <- dfm(af_corpus, tolower=T, remove = stopwords('en'), stem = T, remove_punct=T)
+
+# removing  3-character or less words
+
+bf_dtm <- bf_dtm %>% 
+  dfm_select(min_nchar = 4)
+ 
+
+af_dtm <- af_dtm %>% 
+  dfm_select(min_nchar = 4)
+ 
+
+```
+
+# 4) Runing LDA 
+
+```{r}
+# preparing dtm for topic modeling 
+bf_dtm_tp <- convert(bf_dtm, to = "topicmodels") 
+af_dtm_tp <- convert(af_dtm, to = "topicmodels")
+
+
+# seting seeds for replicability
+set.seed(1)
+
+tp_bf = LDA(bf_dtm_tp, method = "Gibbs", k = 4,  control = list(alpha = 0.1))
+tp_af = LDA(af_dtm_tp, method = "Gibbs", k = 5,  control = list(alpha = 0.1))
+
+```
+
+# 5) inspect topics 
+
+```{r}
+terms(tp_bf, 10)
+```
+
+
+```{r}
+terms(tp_af, 10)
+```
+
+```{r}
+topics_bf <- topics(tp_bf)
+table(topics_bf)
+
+
+```
+
+```{r}
+topics_af <- topics(tp_af)
+table(topics_af)
+```
+
+```{r}
+# code retrieved from https://bookdown.org/yann_ryan/r-for-newspaper-data/topic-modelling.html
+
+result_bf <- tidytext::tidy(tp_bf, 'beta')
+
+result_bf %>%
+    group_by(topic) %>%
+    top_n(10, beta) %>%
+    ungroup() %>%
+    arrange(topic, -beta) %>% 
+    mutate(term = reorder(term, beta)) %>%
+    ggplot(aes(term, beta, fill = factor(topic))) +
+    geom_col(show.legend = FALSE) +
+    facet_wrap(~ topic, scales = "free", ncol = 2) +
+    coord_flip()
+```
+```{r}
+# code retrieved from https://bookdown.org/yann_ryan/r-for-newspaper-data/topic-modelling.html
+
+result_af <- tidytext::tidy(tp_af, 'beta')
+
+result_af %>%
+    group_by(topic) %>%
+    top_n(10, beta) %>%
+    ungroup() %>%
+    arrange(topic, -beta) %>% 
+    mutate(term = reorder(term, beta)) %>%
+    ggplot(aes(term, beta, fill = factor(topic))) +
+    geom_col(show.legend = FALSE) +
+    facet_wrap(~ topic, scales = "free", ncol = 3) +
+    coord_flip()
+```
+

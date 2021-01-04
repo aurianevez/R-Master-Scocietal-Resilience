@@ -1,0 +1,108 @@
+---
+title: "extracting tweets"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+Following Peter's instruction to retrieve tweets from tweets ID for final 
+project on #BlackLivesMater
+
+
+#### 0) setting working directory 
+
+```{r}
+setwd("~/Master/BigdataSmallData/final")
+```
+
+
+```{r, message = FALSE}
+library(tidyverse)
+```
+
+
+reading csv of blm corpus
+```{r, message = FALSE}
+#importing the data
+blm_corpus <- read_csv("blm_corpus.csv.gz") %>% 
+  #turning message_id into char in order to prevent scientific notation
+  mutate(message_id = as.character(message_id))
+
+```
+
+#### Exploring the dataset
+```{r}
+blm_corpus
+```
+
+#### Counting the number of tweet that only have #balcklivesmatter --> 35'664'304 tweets
+
+```{r}
+nbr_blm <- blm_corpus %>% 
+  subset(blacklivesmatter == 1) %>%
+  subset(alllivesmatter == 0) %>% 
+  subset(bluelivesmatter == 0) %>% 
+  nrow()
+
+
+```
+
+```{r}
+nbr_blm
+```
+
+Counting the number of tweets that have #Blacklivesmatter to make sure the results are coherent
+```{r}
+nbr_blm_2 <- blm_corpus %>% 
+  subset(blacklivesmatter == 1)
+
+nbr_blm_2
+```
+
+
+#### filtering only BLM and keeping only the message ID
+
+```{r}
+blm <- blm_corpus %>% 
+  filter(blacklivesmatter == 1, alllivesmatter == 0, bluelivesmatter == 0) %>% 
+  select(1)
+
+blm
+```
+
+#### selecing randomly 200'000 tweet id with set.seed() that enable replication
+
+```{r}
+# making sure the selection can be replicated use set.seed
+set.seed(1)
+
+selection <- blm %>% 
+  sample_n(400000)
+
+selection
+
+```
+
+
+#### creating the file that contains the tweet id we want to extract with the API
+
+puting id back to numeric because hydrator does not allow ""
+```{r}
+#deactivation scientific notation in R
+options(scipen = 999)
+
+#transforming message_id back to numeric
+selection <- selection %>% 
+  mutate(message_id = as.numeric(message_id))
+```
+
+creating the file for hydrator
+```{r}
+
+write.table(selection, col.names=FALSE, row.names = FALSE, "tweetids_2.txt")
+
+```
+
+
+
