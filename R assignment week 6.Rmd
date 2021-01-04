@@ -1,0 +1,173 @@
+---
+title: "R assignment week 6"
+output:
+  html_document:
+    df_print: paged
+---
+
+Deadline for this week: 8 November 23:59. 
+
+Before your do this assignment, please read Wickham 3, 7, and 28, complete the GitHub module "Visualizing data", and watch the instruction videos for week 6 (see Canvas). Remember: Google is your best friend. Not all solutions to the exercises below may be provided in Wickham, the Github modules or my instruction videos.
+
+## 0) setting woriking directory
+
+```{r, message = FALSE}
+setwd("~/Master/BigdataSmallData")
+```
+
+
+## 1) Load the tidyverse package and import the COVID-19 sample dataset
+Write down your code in the grey box.
+
+```{r, message = FALSE}
+library(tidyverse)
+data <- read_csv("BDSD_tweets.csv")
+```
+
+## 2) Recreate three earlier steps
+1) From week 2, create the popular column
+2) From week 5, extract the dates from the created_at column
+3) From week 5, create a new column containing only month and year
+Make sure these three columns are created in the existing dataset. Write down your code in the grey box.
+
+	
+Sat Mar 14 05:15:56 +0000 2020
+
+```{r}
+ Sys.setlocale("LC_TIME", "C")
+#creating the popular variable
+data <- mutate(data, popular = ifelse(user_followers_count > 1000, 1, 0))
+
+#extracting the date
+data$created_at = as.character(data$created_at)
+data$date <- as.Date(data$created_at, format = "%a %b %d %H:%M:%S %z %Y")
+
+#extracting the date 
+data$Year_month <- format(as.Date(data$date, format = "%d-%m-%y"),"%m-%y")
+
+```
+
+## 3) Create a new column "favoritecat"
+Recode the column favorite_count into three categories: (1) 0 favorites, (2) 1-100 favorites, and (3) 100 or more favorites, nowadays called likes on Twitter. Write down your code in the grey box.
+
+```{r}
+data <- data %>% 
+  mutate(favoritecat = case_when(
+    favorite_count < 1 ~ "0",
+    favorite_count >= 1 & favorite_count < 100 ~ "1-100",
+    favorite_count >= 100 ~ "100 or more"
+  ))
+
+```
+
+## 4a) Create a bar plot
+Create a bar plot of the number of tweets created by popular accounts per day (with the columns dates and popular). Write down your code in the grey box.
+
+```{r}
+
+popular <- data %>% 
+  filter(popular == 1)
+
+ggplot(data = popular) +
+  geom_bar(mapping = aes(x = date))
+```
+
+## 4b) Add an informative title
+Copy paste your ggplot code from 4a in the grey box below, and add a new line of code to add an informative title to the bar plot.
+
+```{r}
+
+ggplot(data = popular) +
+  geom_bar(mapping = aes(x = date)) +
+  labs(
+    title = paste("tweets created by popular accounts per day")
+  )
+
+```
+
+## 4c) Apply a different theme
+There are several things you can do with ggplot to make plots look more attractive. The defailt theme of ggplots is grey. Copy paste your ggplot code from 4b in the grey box below, and add a new line of code to change the theme to minimal.
+
+```{r}
+
+ggplot(data = popular) +
+  geom_bar(mapping = aes(x = date)) +
+  labs(
+    title = paste("tweets created by popular accounts per day")
+  ) +
+  theme_minimal()
+
+```
+
+## 4d) Fill by month
+Next we would like to the define the colors of the bars by means of month. Copy paste your ggplot code from 4c in the grey box below, and fill by month.
+
+```{r}
+
+ggplot(data = popular) +
+  geom_bar(mapping = aes(x = date, fill = Year_month)) +
+  labs(
+    title = paste("tweets created by popular accounts per day")
+  ) +
+  theme_minimal()
+
+
+
+```
+
+## 4d) Modify the color palette
+Replace the color palette by a palette of your choice. Copy paste your ggplot code from 4c in the grey box below, and add a new line of code to change the palette
+
+```{r}
+
+ggplot(data = popular) +
+  geom_bar(mapping = aes(x = date, fill = Year_month)) +
+  labs(
+    title = paste("tweets created by popular accounts per day")
+  ) +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Blues")
+
+
+```
+
+## 4e) Facet grid with favoritecat 
+We would finally like to divide the plot into subplots based on our new column favoritecate. Copy paste your ggplot code from 4d in the grey box below, and add a new line of code to facet the plot into columns (not rows).
+
+```{r}
+ggplot(data = popular) +
+  geom_bar(mapping = aes(x = date, fill = Year_month)) +
+  labs(
+    title = paste("tweets created by popular accounts per day")
+  ) +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Blues") +
+  facet_grid(cols = vars(favoritecat))
+  
+
+
+```
+
+## 5) Recreate this plot
+Try to recreate the plot posted on Canvas. Think about whether you should reshape your data and which mapping and ggplot options you need. Write down your code in the grey box.
+
+```{r}
+
+graph <- data %>% 
+  select(favorite_count, retweet_count, Year_month) %>% 
+  pivot_longer(cols = c(favorite_count, retweet_count), names_to = "variable", values_to = "count")
+  
+  
+ggplot(data = graph, aes(Year_month, weight = count)) + 
+   geom_bar(
+     mapping = aes(fill = variable),
+     position = "fill"
+     )+ 
+    scale_fill_manual(values=c("#00CC00", "#0080FF")) +
+  labs(fill = "Count Type")
+
+
+```
+
+## 6) Now, knit your document. 
+Submit your html file on Canvas.
