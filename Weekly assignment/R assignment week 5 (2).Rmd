@@ -1,0 +1,119 @@
+---
+title: "R assignment week 5"
+output:
+  html_document:
+    df_print: paged
+---
+
+Deadline for this week: 1 November 23:59. 
+
+Before your do this assignment, please read Wickham 5.5-5.7 and 16, complete the GitHub module "Summarizing data", and watch the instructions videos for week 5 (see Canvas). Remember: Google is your best friend. Not all solutions to the exercises below may be provided in Wickham, the Github modules or my instruction videos.
+
+## 0) seting work directory
+
+```{r}
+setwd("~/Master/BigdataSmallData")
+
+```
+
+
+## 1) Load the tidyverse package and import the COVID-19 sample dataset
+Write down your code in the grey box. 
+
+```{r, message = FALSE}
+
+library(tidyverse)
+data <- read_csv("BDSD_tweets.csv")
+
+```
+
+## 2) Compute descriptives
+Compute the (1) means, (2) medians and (3) standard deviations of the favorite_count and retweet_count columns. Write down your code in the grey box.
+
+
+```{r}
+# Mean <- pivot_longer(result_mean, cols = c(like, wow, angry, sad, love, shares), names_to = "reaction", values_to = "mean")
+
+summary <- data %>% 
+  select(favorite_count, retweet_count) %>% 
+  summarise_all(c("mean","sd")) %>% 
+  pivot_longer(cols = everything(), names_to = "count", values_to = "value")
+
+
+print(summary)
+
+#Question : How could I pivot my table in way that I have under count only favorite retweet and then have a column sd and a column mean ?
+
+```
+
+
+## 3a) Check class created_at
+We would next like to compute these descriptives per month, but in order to do so we first need to extract dates from the created_at column. We will do this using the function "as.Date" which only accepts character columns. Thus, we should check whether created_at is a character column. Write down your code in the grey box.
+
+```{r}
+class(data$created_at)
+```
+
+## 3b) Convert created_at to character 
+As you can see, we need to convert created_at to a character column. Overwrite the old column with the character version. Write down your code in the grey box.
+
+```{r}
+# already a character 
+# data$created_at <- as.character(data$created_at)
+
+```
+
+## 3c) Extract the dates using as.Date
+Now, we can finally create a NEW variable, applying "as.Date" to the created_at column. You could call this new column "dates" for instance. Write down your code in the grey box. Please note that it may be useful to first print one or multiple rows first so you know which date format is appropriate. 
+
+#### In case your code keeps returning NA, there could be a problem concerning your system locale. Remove the hash in the code below and run it to solve this:
+
+```{r}
+#Sys.setlocale("LC_TIME", "C")
+```
+
+```{r}
+head(data$created_at)
+```
+
+
+```{r}
+
+data$date <- format(as.Date(data$created_at, format = "%a %B %d %H:%M:%S %z %Y" ),"%d-%m-%y")
+
+```
+
+## 4) Extract month and year
+Perfect. You are almost done. The last thing we want to do is to extract only the month and year from our new dates column. You could call this NEW column something like "month". Write down your code in the grey box.
+
+```{r}
+
+data$month <- format(as.Date(data$date, format = "%d-%m-%y"),"%m")
+
+```
+
+## 5) Number of months
+How many tweets have been posted per month? Find a function that helps you summarize this. Write down your code in the grey box.
+
+```{r}
+
+tweet_month <- data %>% 
+  count(month)
+
+```
+
+## 6) Compute descriptives per month
+Compute the (1) means, (2) medians and (3) standard deviations of the favorite_count and retweet_count columns again, but now grouped by our new variable month. Write down your code in the grey box.
+
+```{r, message = FALSE}
+
+summary_2 <- data %>% 
+  group_by(month) %>% 
+  select(c(retweet_count, favorite_count)) %>% 
+  summarise_all(c("mean","sd"), na.rm = TRUE) 
+  
+
+```
+
+## 7) Now, knit your document. 
+Submit your html file on Canvas.

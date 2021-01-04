@@ -1,0 +1,190 @@
+---
+title: "R assignment week 3"
+output:
+  html_document:
+    df_print: paged
+---
+
+## 0) Seting Work directory 
+```{r}
+
+setwd("~/Master/BigdataSmallData")
+
+```
+
+
+## 1) Load the tidyverse package
+Write down your code in the grey box. 
+
+```{r,message = FALSE}
+
+library(tidyverse)
+
+```
+
+## 2) Import the COVID-19 sample dataset
+Write down your code in the grey box.
+
+```{r}
+
+data <- read_csv("BDSD_tweets.csv")
+
+```
+
+## 3) Rename the created_at column
+Sometimes you wish to rename a column because, for example, its label may not be clear enough to you. Practice using the rename function and rename the "created_at" column to "date". Write down your code in the grey box.
+
+```{r}
+#rename(df, new_name = old_name)
+data <- rename(data, date = created_at)
+
+```
+
+## 4) Recode values of the user_location column
+In addition to renaming columns, you may also want to recode values belonging to a certain column. For instance, some users have indicated their user location to be the United States while others filled out USA. Practice using the recode function and create a NEW column in which different ways of writing USA (United States, US, U.S.) are recoded to "USA". Write down your code in the grey box.
+
+```{r}
+
+data %>% summarise(user_location)
+
+data1 <- data %>% 
+  mutate(NEW = user_location) %>% 
+  mutate(NEW = recode(NEW, "US" = "USA", "Etats-Unis" = "USA", "United States" = "USA", "USA <U+0001F1FA><U+0001F1F8>" = "USA"))
+
+data1 %>% summarise(NEW)
+
+
+```
+
+## 5) Recode values of the user_verified column
+Let's assume there is also a good reason for you to want to recode the values of "user_verified" "FALSE" to 0 and "TRUE" to 1. Please note that the data type of "user_verified" is logical (hence the TRUE/FALSE values). How would you do this? Write down your code in the grey box.
+
+```{r}
+
+data2 <- data %>% mutate(user_verified = ifelse(user_verified == TRUE, 1, 0))
+head(data2$user_verified)
+```
+
+## 6a) Apply pivot_longer to dataset
+The sample dataset is already considerably tidy. There are instances, however, in which you would like to reshape the data, for instance by combining different columns into one single column. 
+
+An example is when you would like to make specific types of plots. Let's say that we want to create a line plot using our COVID-19 tweets with one line representing the favorite counts of a tweet and a second line representing the retweet counts (e.g., per day, week, month). In order to plot these counts, you need to "pivot longer" their columns. 
+
+Apply pivot_longer to the sample dataset in the way as described above (by combining the favorite and retweet counts columns). Label the new columns you create using both the names_to and values_to arguments. Once you have run your code, you should have a NEW data frame that includes 40,000 observations and 34 variables. Write down your code in the grey box.
+
+```{r}
+# colnames(data)
+data3 <- data %>% 
+  pivot_longer(cols = c(favorite_count, retweet_count), names_to = "type_count", values_to = "count")
+
+data3 %>% summarise(type_count, count)
+
+
+```
+
+## 6b) Combine select and pivot_longer
+You hopefully managed to apply pivot_longer to the sample dataset, well done! We, however, do not need all variables to create our line plot. We only need three columns: "created_at" (date tweet was posted), "favorite_count", and "retweet_count". Create a command chain using pipes (%>%) from the object to the function "select" and then to the function "pivot_longer". Assign this command chain to a new object again. Write down your code in the grey box.
+
+```{r}
+
+# i change creatd_at for date previously and saved it
+
+data4 <- data %>% 
+  select(date, favorite_count, retweet_count) %>% 
+  pivot_longer(cols = c(favorite_count, retweet_count), names_to = "type_count", values_to = "count")
+
+data4
+  
+
+```
+
+PS: In week 6 we will practice with actually creating plots. 
+
+## 7a) Import more data
+For the final part of this assignment, download the file MoreDataTweets.tsv from Canvas and save it to your working directory. Then, run the code below.
+
+```{r}
+# if (!require("bit64")) install.packages("bit64")
+# had some issue with bit64 had to do it on its own....mystery
+```
+
+
+```{R, INCLUDE = FALSE, warning = FALSE, message = FALSE}
+if (!require("data.table")) install.packages("data.table")
+library(data.table, bit64)
+
+moredata = as_tibble(fread("MoreDataTweets.tsv", quote=""))
+names = c("tweetid", "username", "timestamp", "followers", "friends", "retweets", "favorites","entities", "sentiment", "mentions", "hashtags", "urls")
+colnames(moredata) = names
+```
+
+## 7b) Merging datasets
+The data frame "moredata" includes additional information about the COVID-19 tweets such as sentiment scores. We would therefore like to merge the two data frames. Before we can do this, we need a key column: a column that contains values that could identify the same tweets in both data frames. There is one column in both data frames that meets this criterion: "tweetid" in "moredata" and "id" in our sample dataset. In order to be able to merge the data frames, these columns need to have the same (1) name and (2) data type - which they do not have yet. Convert both columns to character columns and rename one of the columns to make it correspond to the other. Write down your code in the grey box.
+
+
+```{r, werning = FALSE, message = FALSE}
+
+#renaming colone id for metadata
+moredata <- moredata %>% rename(id = tweetid)
+
+# checking type of id for both data set
+# head(moredata) --> int64
+# head(data) --> dbl
+# not to myself can use also sapply(df, class)
+
+library(bit64)
+
+# int64 --> Char
+moredata <- moredata %>% 
+  mutate(id = as.character.integer64(id))
+
+# verifying 
+sapply(moredata,class)
+
+# dbl --> char
+data <- data %>%
+  mutate(id = as.character(id))
+
+# verifying
+sapply(data, class)
+
+
+```
+
+## 7c) Apply left_join
+Now, it is time to merge the data frames into a new one. To do this, use left_join (with the sample dataset as the left/first data frame and moredata as the right/second one) and write down your code in the grey box.
+
+```{r}
+
+data_joined <- left_join(data, moredata, by = "id")
+
+```
+
+## 7d) Check results
+Print the first TEN rows of the variable sentiment in the new data frame to check whether you have merged the data frames successfully. Write down your code in the grey box.
+
+```{r}
+data_joined %>% 
+  select(sentiment) %>% 
+  head(, 10)
+
+```
+
+## 7e) Other joining functions...
+Tidyverse allows you to join data frames in more than one way. Please explain, what would have happened if you would have used inner_join instead of left_join?
+
+I found a good summary here : https://dplyr.tidyverse.org/reference/join.html
+and decided to copy the answer in order to go back to it when needed.
+
+If i have two data set x and y, by writing __inner_join__(x,y...): 
+
+"return __all rows from x__ where there are __matching values in y__, and __all columns from x and y__. If there are multiple matches between x and y, all combination of the matches are returned."
+
+for __left_join__ :
+"return __all rows from x, and all columns from x and y__. Rows in x with no match in y will have NA values in the new columns. If there are multiple matches between x and y, all combinations of the matches are returned."
+
+for __right_join__:
+"return __all rows from y, and all columns from x and y__. Rows in y with no match in x will have NA values in the new columns. If there are multiple matches between x and y, all combinations of the matches are returned."
+
+## 8) Now, knit your document. 
+Submit your html file on Canvas.
